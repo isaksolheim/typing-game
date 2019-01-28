@@ -23,9 +23,9 @@ document.addEventListener('keydown', key_down_handler);
 TODO
 - more words
 - increasing spawnrate
-- loose
-- wpm 
 - settings menu with difficulty
+- easter egg
+- highscores
 */
 
 // GLOBAL VARIABLES
@@ -36,9 +36,30 @@ var word_index = 0;     //
 var word_x;             // input x-position
 var word_y;             // input y-position
 var started = false;    // bool to check if user has typed "start"
-var word_list = ['armwrestle', 'skateboard', 'wifi', 'computer', 'dogs', 'lemons', 'keyboard'];
+var word_list = ['angry', 'skateboard', 'wifi', 'computer', 'dogs', 'lemons', 'keyboard'];
 var focus = 0; // which enemy is in focus
 var word_speed = 0; // speed word is moving by
+var start_time = new Date().getTime() / 1000; // start-time in seconds
+var delta_time = 0.0;
+var c = 0; // used to start time, fix later
+var word_counter = 0; // number of enemies destroyed 
+var spawnrate = 0; // number of words at the screen at the same time
+
+function start_clock() {
+	if (started === true && c === 0) {
+		start_time = new Date().getTime() / 1000;
+		c++;
+	}
+}
+
+function get_wpm() {
+	/* calculates wpm */
+	var minutes = delta_time / 60;
+	var wpm = Math.floor(word_counter / minutes);
+	ctx.fillStyle = "orange";
+	ctx.font = "10px Arial";
+	ctx.fillText(wpm.toString(), 900, 50);
+}
 
 class Enemy {
     constructor(text, x_pos, y_pos, dead, placeholder_x, chrs_correct) {
@@ -92,8 +113,9 @@ class Enemy {
 
 // generate enemies
 var enemies = [];
-for (var i = 0; i < 3; i++) {
+for (var i = 0; i < 6; i++) {
     enemies[i] = new Enemy('', -50, 200, true, '');    
+    spawnrate++;
 }
 
 function start_or_lose() {
@@ -144,12 +166,36 @@ function find_focus() {
     }
 }
 
+var placeholder_time = 0.0;
+
+function dynamic_difficulty() {
+	/* increases numbers of words on screen every 5 seconds */
+	if (started === true && placeholder_time === 0.0) {
+		placeholder_time = delta_time;
+	}
+	if (delta_time - placeholder_time > 5) {
+		spawnrate++;
+		placeholder_time = 0.0;
+	}
+	for (var i = 0; i < spawnrate; i++) {
+		if (enemies[i] != true) {
+			enemies[i] = new Enemy('', -50, 200, true, '');
+		}
+	}
+}
+
 function draw() { // the game-loop
     // clear canvas
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    start_clock(); // starts clock once game starts
+
+    delta_time = (new Date().getTime() / 1000) - start_time; // seconds after start
+
+    dynamic_difficulty(); // enables harder and harder
     start_or_lose();
+    get_wpm(); // displays wpm
 
     find_focus();
 
@@ -170,6 +216,7 @@ function draw() { // the game-loop
                 word_speed = 1;   // words start moving (after start)
                 started = true;   // starts game
                 enemies[focus].dead = true; // random_word is destroyed
+                word_counter++; // increase eniemies destroyed
             }
             current_word = ''; // word is reset
         } else if (chr == 'backspace') {
