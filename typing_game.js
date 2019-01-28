@@ -22,10 +22,11 @@ document.addEventListener('keydown', key_down_handler);
 /*
 TODO
 - more words
-- increasing spawnrate
 - settings menu with difficulty
 - easter egg
 - highscores
+- game over screen with stats
+- prevent enemies spawning on top of eachother 
 */
 
 // GLOBAL VARIABLES
@@ -76,7 +77,7 @@ class Enemy {
             this.placeholder_x = this.x_pos; // set placeholder
             for (var i = 0; i < this.text.length; i++) {
                 var ch = this.text.charAt(i);
-                if (i < this.chrs_correct) {
+                if (i < this.chrs_correct && this == enemies[focus]) {
                     ctx.fillStyle = 'green';
                 } else {
                     ctx.fillStyle = 'white';
@@ -158,10 +159,19 @@ function draw_input() {
 }
 
 function find_focus() {
-    for (var i = 0; i < enemies.length; i++) {
-        if (current_word.charAt(0) == enemies[i].text.charAt(0)) {
-            focus = i;
-            break;
+    /* finds focus based on first character of word
+       and how far it is from the end of the screen */
+    if (started === false) {
+        focus = 0; // default
+    } else {
+        var highest = -10000;
+        for (enemy of enemies) {
+            if (current_word.charAt(0) === enemy.text.charAt(0)) {
+                if (enemy.x_pos > highest) {
+                    highest = enemy.x_pos;
+                    focus = enemies.indexOf(enemy);
+                }
+            } 
         }
     }
 }
@@ -177,11 +187,9 @@ function dynamic_difficulty() {
 		spawnrate++;
 		placeholder_time = 0.0;
 	}
-	for (var i = 0; i < spawnrate; i++) {
-		if (enemies[i] != true) {
-			enemies[i] = new Enemy('', -50, 200, true, '');
-		}
-	}
+    if (enemies.length < spawnrate) {
+	    enemies[enemies.length] = new Enemy('', -50, 200, true, '');
+    }
 }
 
 function draw() { // the game-loop
@@ -194,10 +202,10 @@ function draw() { // the game-loop
     delta_time = (new Date().getTime() / 1000) - start_time; // seconds after start
 
     dynamic_difficulty(); // enables harder and harder
-    start_or_lose();
+    start_or_lose(); // handles start and lose of game
     get_wpm(); // displays wpm
 
-    find_focus();
+    find_focus(); // finds which enemy to focus
 
     for (var i = 0; i < enemies.length; i++) {
         enemies[i].draw(); // draws enemy
