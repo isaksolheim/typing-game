@@ -25,7 +25,6 @@ TODO
 - settings menu with difficulty
 - easter egg
 - highscores
-- game over screen with stats
 - prevent enemies spawning on top of eachother 
 */
 
@@ -45,6 +44,11 @@ var delta_time = 0.0;
 var c = 0; // used to start time, fix later
 var word_counter = 0; // number of enemies destroyed 
 var spawnrate = 0; // number of words at the screen at the same time
+var game_is_over = false;
+var score = 0;
+var in_settings = false;
+var difficulty = 0;
+var menu_enemy = [];
 
 function start_clock() {
 	if (started === true && c === 0) {
@@ -92,6 +96,11 @@ class Enemy {
             if (started) { this.x_pos = 0; } 
             else { this.x_pos = -200; } // sets position off-screen if not started
             this.y_pos = Math.floor(Math.random() * canvas.height);
+            if (this.y_pos > (canvas.height / 2)) {
+            	this.y_pos -= 20;
+            } else {
+            	this.y_pos += 20;
+            }
             this.dead = false;
         }
     }
@@ -123,21 +132,56 @@ function start_or_lose() {
     /* 
         start and lose "menues" 
     */
-    if (started != true) {
+    if (started != true && in_settings === false) {
         enemies[0].text = "start";
         enemies[0].x_pos = 450;
         enemies[0].y_pos = 200;
+        enemies[1].text = "options";
+        enemies[1].x_pos = 450;
+        enemies[1].y_pos = 300;
+        if (game_is_over) {
+        	game_over();
+        }
     }
     // check if enemy is off screen
     for (enemy of enemies) {
         if (enemy.x_pos > canvas.width) {
             started = false; // stop game
+            spawnrate = 6;
+            enemies.splice(5, enemies.length-5);
             word_speed = 0;  // stop movement
             for (e of enemies) {
                 e.x_pos = -200;
             }
+            game_is_over = true;
+            score = Math.floor(delta_time);
         }
     }
+}
+
+function settings_menu() {
+	    enemies[0].text = "medium";
+        enemies[0].x_pos = 450;
+        enemies[0].y_pos = 200;
+        enemies[1].text = "extreme";
+        enemies[1].x_pos = 450;
+        enemies[1].y_pos = 300;
+
+        if (current_word === enemies[0].text) {
+        	difficulty = 0;
+        	in_settings = false;
+        } else if (current_word === enemies[0].text) {
+        	difficulty = 1;
+        	in_settings = false;
+        }
+}
+
+function game_over() {
+	/* this function displays game-over screen */
+	ctx.fillStyle = "white";
+	ctx.font = "30px Arial";
+	ctx.fillText("You survived for " + score.toString() + " seconds.", 100, 100);
+	ctx.fillText("You killed " + word_counter.toString() + " words.", 100, 200);
 }
 
 function draw_input() {
@@ -162,7 +206,11 @@ function find_focus() {
     /* finds focus based on first character of word
        and how far it is from the end of the screen */
     if (started === false) {
-        focus = 0; // default
+    	if (current_word.charAt(0) === 's') {
+    		focus = 0;
+    	} else if (current_word.charAt(0) === 'o') {
+    		focus = 1;
+    	}
     } else {
         var highest = -10000;
         for (enemy of enemies) {
@@ -201,10 +249,13 @@ function draw() { // the game-loop
 
     delta_time = (new Date().getTime() / 1000) - start_time; // seconds after start
 
+    if (in_settings) {
+    	settings_menu();
+    }
+
     dynamic_difficulty(); // enables harder and harder
     start_or_lose(); // handles start and lose of game
     get_wpm(); // displays wpm
-
     find_focus(); // finds which enemy to focus
 
     for (var i = 0; i < enemies.length; i++) {
@@ -221,8 +272,13 @@ function draw() { // the game-loop
             word_index = 0; // reset word index
             chrs_correct = 0; // reset chrs correct
             if (current_word == enemies[focus].text) {
+            	console.log('re');
+            	started = true;   // starts game
                 word_speed = 1;   // words start moving (after start)
-                started = true;   // starts game
+                in_settings = false;
+                if (started === false) {
+                	in_settings = true; // turn on settings menu
+                }
                 enemies[focus].dead = true; // random_word is destroyed
                 word_counter++; // increase eniemies destroyed
             }
